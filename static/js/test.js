@@ -32,3 +32,5 @@ function greetStudent(name){
     console.log("hello " + name + ", welcome to NRIIT learning management system")
 }
 greetStudent(student_name)
+
+fu
