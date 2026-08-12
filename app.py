@@ -1,35 +1,34 @@
 import sqlite3
-
-from flask import Flask,render_template,jsonify,request,redirect,url_for
+# pyrefly: ignore [missing-import]
+from flask import Flask,render_template,jsonify,request,redirect,url_for,session
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  
+app.secret_key="super_secret_key"
+
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect("users.db")
     conn.row_factory = sqlite3.Row
+    # return row as dictionary 
     return conn
+ 
+# create database tables
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
+    # create users table
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            dob TEXT NOT NULL,
-            gender TEXT NOT NULL,
-            course TEXT
-        )
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        dob TEXT NOT NULL,
+        gender TEXT NOT NULL,
+        course TEXT NOT NULL
+    )
     """)
     conn.commit()
-    cursor.execute("PRAGMA table_info(users)")
-    existing_columns = [row[1] for row in cursor.fetchall()]
-    if 'course' not in existing_columns:
-        cursor.execute('ALTER TABLE users ADD COLUMN course TEXT')
-        conn.commit()
     conn.close()
-
 init_db()
 
 @app.route('/')
@@ -68,15 +67,10 @@ def api_register():
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
-    conn.close()
-
     if user:
         return jsonify({"status": "error", "message": "User already exists with this email!"}), 400
-        
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (name, email, password, dob, gender, course) VALUES (?, ?, ?, ?, ?, ?)",
-                   (data.get("name"), email, data.get("password"), data.get("dob"), data.get("gender"), data.get("course")))
+    
+    cursor.execute("INSERT INTO users (name, email, password, dob, gender, course) VALUES (?, ?, ?, ?, ?, ?)", (data["name"], data["email"], data["password"], data["dob"], data["gender"], data["course"]))
     conn.commit()
     conn.close()
     return jsonify({"status": "success", "message": "Registration successful!"})
@@ -86,17 +80,22 @@ def api_login():
     data = request.get_json()
     email = data.get("email")
     password = data.get("password")
-
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
     user = cursor.fetchone()
     conn.close()
-
-    if user and user['password'] == password:
+    if user and user["password"] == password:
+        # session variables to keep track of logged in user
+        session["user_email"] = user["email"]
+        session["user_name"] = user["name"]
         return jsonify({"status": "success", "message": "Login successful! Welcome back."})
     else:
         return jsonify({"status": "error", "message": "Invalid email or password!"}), 401
-
+@app.route('/logout', methods=["GET"])
+def logout():
+    session.pop("user_email", None)
+    session.pop("user_name", None)
+    return redirect(url_for("login"))
 if __name__ == '__main__':
     app.run(debug=True)
