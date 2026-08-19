@@ -6,3 +6,4 @@ Jinja2==3.1.6
 MarkupSafe==3.0.3
 Werkzeug==3.1.8
 gunicorn==26.0.0
+POSTGRES_URL="postgres://postgres.ejuraxjlmtodleiruioa:1e0pekVNYRbvFx3j@aws-0-ap-south-1.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x"
